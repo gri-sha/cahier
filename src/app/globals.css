@@ -1,0 +1,845 @@
+/* Theme variables (--bg, --fg, --th-*, --type-*) are injected by the root
+   layout from src/lib/themes.ts. There is no CSS framework: styling is a small
+   reset (below, replacing what Tailwind's preflight used to do), the custom
+   classes for text and chrome — .heading/.base/.minor for the website, the
+   .doc rules for rendered markdown — and a compact utility layer at the end of
+   this file (spacing, flex, the fg/bg alpha colors) that the components use.
+   Text sizing lives only in the classes here and in themes.ts. */
+
+:root {
+  /* the notebook margin rule: distance from the left edge */
+  --margin-x: clamp(1.25rem, 9vw, 6.5rem);
+  /* one ruled line of the cahier grid — the unit of all vertical spacing.
+     Every block gap is a whole line (.mt-8/.py-8 = 2rem = one line) or half a
+     line (.mt-4 = 1rem); nothing in between, so blocks always land on or
+     between the rules. */
+  --line: 2rem;
+  /* the reading measure: text-column width shared by the editor preview and
+     the published page so both wrap markdown identically. Each surface adds
+     its own gutters on top of this (see the max-w calc()s). */
+  --measure: 40rem;
+}
+
+@layer base {
+  /* reset — replaces Tailwind's preflight, which is no longer loaded. Border-box
+     everywhere, all default margins dropped (the site sets every gap itself, on
+     the grid), links and form controls inherit their type, and svgs lay out as
+     blocks inside the flex rows that hold them. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  * {
+    margin: 0;
+  }
+
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--th-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  svg {
+    display: block;
+  }
+
+  ::selection {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  /* the theme's special color shows itself only here — and only where
+     there's a real pointer to select with */
+  @media (hover: hover) and (pointer: fine) {
+    ::selection {
+      background: var(--accent);
+      color: var(--bg);
+    }
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--fg);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------- text styles: website ---------- */
+/* Every piece of chrome text is exactly one of these three. */
+
+/* page titles in the heading face */
+.heading {
+  font-family: var(--th-heading);
+  font-weight: var(--th-heading-weight);
+  letter-spacing: var(--th-heading-tracking);
+  font-size: var(--type-heading);
+  line-height: var(--type-heading-lh);
+}
+
+/* default text */
+.base {
+  font-family: var(--th-text);
+  font-size: var(--type-base);
+  line-height: var(--type-base-lh);
+}
+
+/* small mono: chrome buttons, hints, labels */
+.minor {
+  font-family: var(--th-mono);
+  font-size: var(--type-minor);
+  line-height: var(--type-minor-lh);
+}
+
+/* landing splash: .heading blown up to the hero size. The word still occupies
+   six ruling rows so everything below stays on the grid — but ::selection
+   paints the whole line box, so a 6-row line-height would highlight a rectangle
+   that swallows the tagline. Instead the line box is kept to 8rem (the
+   selection-highlight height, tuned to hug the word) and the other 4 rows are
+   added as margins, which ::selection does not paint. The margins are split so
+   the word's baseline still lands on its rule; tuned to Shadows Into Light's
+   metrics at the desktop hero size (8 + 2.875 + 1.125 = 12rem = 6 rows). */
+.hero {
+  font-size: var(--type-hero);
+  line-height: 8rem;
+  margin-top: 2.875rem;
+  margin-bottom: 1.125rem;
+}
+
+/* Line-height locked to the ruling grid so the glyphs center in the 2rem row —
+   the em box's center on the row's center. Plain grid-locked leading already
+   centers text in the band, seating each line on the ruling. */
+.on-line-mid {
+  line-height: var(--line);
+}
+
+/* landing content block: start on a ruling line (snap 24vh down to --line) */
+.landing-top {
+  padding-top: 24vh;
+}
+@supports (top: round(down, 1px, 1px)) {
+  .landing-top {
+    padding-top: round(down, 24vh, var(--line));
+  }
+}
+
+/* Landing footer: three rows in the last three complete ruled bands of the
+   first screen (github link over contact over legal). Bottom-anchoring can't
+   sit on the grid (100dvh is no multiple of --line), so it's top-anchored to
+   the band boundary three lines up instead; the bottom:0 fallback is for
+   engines without round(). Each row is its own .h-line band with
+   .items-center, so the links land on their band's midline. */
+.landing-foot {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  min-height: calc(var(--line) * 3);
+}
+@supports (top: round(down, 1px, 1px)) {
+  .landing-foot {
+    bottom: auto;
+    top: calc(round(down, 100dvh, var(--line)) - var(--line) * 3);
+  }
+}
+
+/* ---------- chrome ---------- */
+
+/* The logotype: the theme's heading face at chrome scale (a mark, not a text
+   style), so it changes with the theme like the rest of the type. Sat inline
+   next to .minor mono text, the baseline drop (--th-wordmark-shift) seats the
+   ink on the mono's optical center — tuned per heading face in themes.ts.
+   A mark, not copy: not selectable, and line-height 0 so the heading face's
+   tall metric box (1.6em for Shadows Into Light) never inflates the row —
+   the .minor strut sizes the line and the glyphs just overpaint it. */
+.wordmark {
+  font-family: var(--th-heading);
+  font-weight: var(--th-heading-weight);
+  letter-spacing: var(--th-heading-tracking);
+  font-size: var(--th-wordmark-size);
+  line-height: 0;
+  vertical-align: var(--th-wordmark-shift);
+  user-select: none;
+}
+
+/* The brand row (wordmark + /username link), set as one line of inline text.
+   The gap between the links is a real mono space, shrunk by word-spacing from
+   its 0.6em advance to roughly the old gap-1. Hovering /username sets it bold
+   (see .btn); the wordmark, a logo, stays put. */
+.brandrow {
+  word-spacing: -0.3em;
+}
+
+/* Every button on the site is text: no background, no borders. The hover
+   affordance is the label going bold. Buttons are always set in the mono face,
+   which is monospaced, so the bold cut has the exact same advance width as the
+   regular one — the label never reflows or nudges its neighbours on hover. */
+.btn {
+  font-family: var(--th-mono);
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  /* controls, not copy — covers a.btn links, which are selectable by default */
+  user-select: none;
+}
+.btn:hover:not(:disabled),
+a.btn:hover {
+  font-weight: 700;
+}
+.btn:disabled {
+  /* the one text grey: fg at 55%, same as text-fg/55 in the components */
+  color: color-mix(in srgb, var(--fg) 55%, transparent);
+  cursor: default;
+}
+
+.field {
+  font-family: var(--th-mono);
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 25%, transparent);
+  border-radius: 0;
+  padding: 0.4rem 0;
+  outline: none;
+}
+.field:focus {
+  border-bottom-color: var(--fg);
+}
+.field::placeholder {
+  color: color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+/* code-entry field: spaced digits */
+.otp {
+  letter-spacing: 0.4em;
+}
+
+/* username rows: the cahier.fyi/ prefix and its field share one mono voice */
+.urlrow {
+  font-family: var(--th-mono);
+}
+
+/* Header dropdown anchor. On desktop the panel hangs under its own button
+   (relative wrapper). On narrow screens the anchor becomes the nearest bar
+   (header or action row) and the panel aligns to its edge instead. */
+.hdr-menu {
+  position: relative;
+}
+
+/* dropdown panel hanging off a header button */
+.menu {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 0;
+  z-index: 50;
+  min-width: 11rem;
+  max-width: calc(100vw - 2.5rem);
+  background: var(--bg);
+  /* same 1px / 10% ink as the chrome hairlines (header, editor column) */
+  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  padding: 0.85rem 1rem;
+}
+
+/* Document actions (publish / preview / theme). Desktop: display:contents —
+   the header's flex row owns them, exactly as if unwrapped; the list toggle
+   is hidden. Phones: they collapse behind the header's list toggle and
+   disclose as a stacked panel under the header ([data-open]); tapping
+   outside, or into the text, dismisses it. */
+.hdr-actions {
+  display: contents;
+}
+
+@media (width < 40rem) {
+  /* the header becomes the positioning context; a panel's right offset
+     aligns to it, so panels never spill off-screen regardless of where
+     their trigger sits */
+  .hdr-menu {
+    position: static;
+  }
+
+  /* right:0 would put a panel flush with the screen edge; indent it to the
+     header's own gutter */
+  .menu {
+    right: 1.25rem;
+  }
+
+  .hdr-actions {
+    display: none;
+  }
+  .hdr-actions[data-open] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 1.25rem;
+    z-index: 50;
+    min-width: 11rem;
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+    padding: 0.85rem 1rem;
+  }
+}
+
+/* horizontal ruling of a French exercise book, one line per --line */
+.ruling {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--line) - 1px),
+    color-mix(in srgb, var(--fg) 8%, transparent) calc(var(--line) - 1px),
+    color-mix(in srgb, var(--fg) 8%, transparent) var(--line)
+  );
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.settle {
+  animation: settle 0.55s ease-out both;
+}
+
+/* ---------- editor ---------- */
+
+.editor-ta {
+  font-family: var(--th-mono);
+  font-size: var(--type-code);
+  /* roomier than the code token's leading: raw markdown breathes better */
+  line-height: 1.75;
+  width: 100%;
+  display: block;
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  color: inherit;
+  caret-color: var(--fg);
+  field-sizing: content;
+  min-height: 55dvh;
+}
+.editor-ta::placeholder {
+  color: color-mix(in srgb, var(--fg) 30%, transparent);
+}
+
+/* ---------- text styles: rendered document ---------- */
+/* Markdown maps onto h1–h6, base (the .doc root) and code. base and code
+   keep bold, italic and bold-italic from real font cuts. */
+
+.doc {
+  font-family: var(--th-text);
+  font-size: var(--type-base);
+  line-height: var(--type-base-lh);
+  overflow-wrap: break-word;
+  /* Document rhythm. The gap above any text is measured by the text itself:
+     headings take 1em — the bigger the type, the bigger the gap — and only
+     the document's first element drops it (see > :first-child). The fixed
+     gaps derive from the ruling unit (--line = 2rem): section = the hr
+     break; block = big blocks (quote, pre, table); flow = paragraphs, lists
+     and the tight gap after a heading; hug = the gap between list items. */
+  --section: var(--line); /* 2rem */
+  --block: calc(var(--line) / 2); /* 1rem */
+  --flow: calc(var(--line) / 4); /* 0.5rem */
+  --hug: calc(var(--line) / 8); /* 0.25rem */
+}
+
+/* all six levels share the heading face; only the size steps down */
+.doc h1,
+.doc h2,
+.doc h3,
+.doc h4,
+.doc h5,
+.doc h6 {
+  font-family: var(--th-heading);
+  font-weight: var(--th-heading-weight);
+  letter-spacing: var(--th-heading-tracking);
+  /* above: the heading's own size (1em of its level); below: the small
+     --flow gap that binds the section's text to it */
+  margin: 1em 0 var(--flow);
+}
+/* Content following a heading drops its own top margin (a big block's
+   --block would otherwise win the margin collapse), so the heading's small
+   --flow bottom margin alone sets the (tight) gap — the same below every
+   level. Headings are excluded: a heading under a heading keeps its own
+   size-measured gap, so only text binds closely to a heading. */
+.doc :is(h1, h2, h3, h4, h5, h6) + :not(h1, h2, h3, h4, h5, h6) {
+  margin-top: 0;
+}
+
+.doc h1 {
+  font-size: var(--type-h1);
+  line-height: var(--type-h1-lh);
+}
+.doc h2 {
+  font-size: var(--type-h2);
+  line-height: var(--type-h2-lh);
+}
+.doc h3 {
+  font-size: var(--type-h3);
+  line-height: var(--type-h3-lh);
+}
+.doc h4 {
+  font-size: var(--type-h4);
+  line-height: var(--type-h4-lh);
+}
+.doc h5 {
+  font-size: var(--type-h5);
+  line-height: var(--type-h5-lh);
+}
+.doc h6 {
+  font-size: var(--type-h6);
+  line-height: var(--type-h6-lh);
+}
+
+.doc > :first-child {
+  margin-top: 0;
+}
+
+.doc p {
+  margin: var(--flow) 0;
+}
+
+.doc a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--fg) 40%, transparent);
+}
+.doc a:hover {
+  text-decoration-color: var(--fg);
+}
+
+.doc strong {
+  font-weight: 700;
+}
+
+.doc ul,
+.doc ol {
+  margin: var(--flow) 0;
+  padding-left: 1.6rem;
+}
+.doc ul {
+  list-style-type: disc;
+}
+.doc ol {
+  list-style-type: decimal;
+}
+.doc li {
+  margin: var(--hug) 0;
+}
+.doc li::marker {
+  color: color-mix(in srgb, var(--fg) 55%, transparent);
+  font-family: var(--th-mono);
+  font-size: 0.9em;
+}
+
+.doc hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--fg) 15%, transparent);
+  /* the document's section break — one full ruled line above and below */
+  margin: var(--section) 0;
+}
+
+.doc blockquote {
+  margin: var(--block) 0;
+  padding-left: 1.25rem;
+  border-left: 1px solid color-mix(in srgb, var(--fg) 35%, transparent);
+  color: color-mix(in srgb, var(--fg) 75%, transparent);
+}
+
+.doc code {
+  font-family: var(--th-mono);
+  font-size: var(--type-code);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  padding: 0.1em 0.35em;
+}
+
+.doc pre {
+  margin: var(--block) 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--fg) 15%, transparent);
+  overflow-x: auto;
+  line-height: var(--type-code-lh);
+}
+.doc pre code {
+  background: none;
+  padding: 0;
+}
+
+.doc table {
+  border-collapse: collapse;
+  margin: var(--block) 0;
+  width: 100%;
+}
+.doc th {
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+}
+.doc td {
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.doc th,
+.doc td {
+  padding: 0.45rem 1.25rem 0.45rem 0;
+  vertical-align: top;
+}
+
+/* ---------- utilities ---------- */
+/* The hand-written replacement for the Tailwind utilities the components used.
+   Names mirror the old ones with `/` and `.` swapped for `-` (text-fg/55 ->
+   text-fg-55, gap-1.5 -> gap-1-5) so they are clean, valid selectors. Defined
+   after the custom classes above, so a color utility wins over .btn's inherited
+   color exactly as the Tailwind utilities layer used to. */
+
+/* display + position */
+.flex {
+  display: flex;
+}
+.inline-flex {
+  display: inline-flex;
+}
+.block {
+  display: block;
+}
+.contents {
+  display: contents;
+}
+.relative {
+  position: relative;
+}
+.absolute {
+  position: absolute;
+}
+
+/* flex alignment */
+.items-center {
+  align-items: center;
+}
+.items-baseline {
+  align-items: baseline;
+}
+.items-end {
+  align-items: flex-end;
+}
+.justify-end {
+  justify-content: flex-end;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.flex-col {
+  flex-direction: column;
+}
+
+/* sizing + insets */
+.min-h-dvh {
+  min-height: 100dvh;
+}
+.h-line {
+  height: var(--line);
+}
+.w-px {
+  width: 1px;
+}
+.w-64 {
+  width: 16rem;
+}
+.max-w-md {
+  max-width: 28rem;
+}
+.max-w-xl {
+  max-width: 36rem;
+}
+.inset-y-0 {
+  top: 0;
+  bottom: 0;
+}
+.mx-auto {
+  margin-inline: auto;
+}
+.mr-auto {
+  margin-right: auto;
+}
+
+/* margins (the grid: 4 = 1rem = half a line, 8 = 2rem = one line) */
+.mt-1 {
+  margin-top: 0.25rem;
+}
+.mt-1-5 {
+  margin-top: 0.375rem;
+}
+.mt-2 {
+  margin-top: 0.5rem;
+}
+.mt-3 {
+  margin-top: 0.75rem;
+}
+.mt-4 {
+  margin-top: 1rem;
+}
+.mt-8 {
+  margin-top: 2rem;
+}
+.my-3 {
+  margin-block: 0.75rem;
+}
+
+/* padding */
+.px-1 {
+  padding-inline: 0.25rem;
+}
+.px-5 {
+  padding-inline: 1.25rem;
+}
+.px-6 {
+  padding-inline: 1.5rem;
+}
+.py-3 {
+  padding-block: 0.75rem;
+}
+.py-8 {
+  padding-block: 2rem;
+}
+.py-16 {
+  padding-block: 4rem;
+}
+.pt-16 {
+  padding-top: 4rem;
+}
+.pr-6 {
+  padding-right: 1.5rem;
+}
+.pb-16 {
+  padding-bottom: 4rem;
+}
+.pb-24 {
+  padding-bottom: 6rem;
+}
+.pl-5 {
+  padding-left: 1.25rem;
+}
+
+/* gaps */
+.gap-1-5 {
+  gap: 0.375rem;
+}
+.gap-3 {
+  gap: 0.75rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.gap-x-5 {
+  column-gap: 1.25rem;
+}
+.gap-x-6 {
+  column-gap: 1.5rem;
+}
+.gap-y-1 {
+  row-gap: 0.25rem;
+}
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+/* misc */
+.select-none {
+  user-select: none;
+}
+.pointer-events-none {
+  pointer-events: none;
+}
+.break-all {
+  word-break: break-all;
+}
+.translate-y-px {
+  transform: translateY(1px);
+}
+.z-10 {
+  z-index: 10;
+}
+
+/* the two theme colors, and fg at the greys the components reuse */
+.text-fg {
+  color: var(--fg);
+}
+.text-fg-55 {
+  color: color-mix(in srgb, var(--fg) 55%, transparent);
+}
+.hover-fg:hover {
+  color: var(--fg);
+}
+.bg-bg {
+  background: var(--bg);
+}
+.bg-fg-20 {
+  background: color-mix(in srgb, var(--fg) 20%, transparent);
+}
+
+/* borders: a side sets the width, a fg-NN class tints it (defined after, so the
+   tint wins over the shorthand's currentColor) */
+.border-0 {
+  border: 0;
+}
+.border-b {
+  border-bottom: 1px solid;
+}
+.border-t {
+  border-top: 1px solid;
+}
+.border-l {
+  border-left: 1px solid;
+}
+.border-fg-10 {
+  border-color: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.border-fg-15 {
+  border-color: color-mix(in srgb, var(--fg) 15%, transparent);
+}
+
+/* responsive: the one breakpoint, 40rem (was Tailwind's sm) */
+@media (min-width: 40rem) {
+  .sm-hidden {
+    display: none;
+  }
+  .sm-px-8 {
+    padding-inline: 2rem;
+  }
+  .sm-pl-8 {
+    padding-left: 2rem;
+  }
+}
+
+/* ---------- component classes ---------- */
+/* combos that carried an arbitrary value or a breakpoint, kept whole rather
+   than smeared across utilities */
+
+/* icon-only header buttons: a content-box flex box exactly one line tall, so
+   the glyph seats on the mono chrome's row */
+.icon-btn {
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  height: 1lh;
+}
+
+/* a light/dark group in the theme menu */
+.theme-group {
+  margin-top: 0.75rem;
+}
+.theme-group:first-child {
+  margin-top: 0;
+}
+
+/* an arrow sat just outside a centered button, vertically centered on it */
+.side-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.side-arrow-after {
+  left: 100%;
+  margin-left: 0.375rem;
+}
+.side-arrow-before {
+  right: 100%;
+  margin-right: 0.375rem;
+}
+
+/* the transient save/status note under the editor header */
+.save-note {
+  position: absolute;
+  top: 100%;
+  right: 1.25rem;
+  z-index: 10;
+  margin-top: 0.5rem;
+  padding-inline: 0.25rem;
+  background: var(--bg);
+  pointer-events: none;
+}
+@media (min-width: 40rem) {
+  .save-note {
+    right: 2rem;
+  }
+}
+
+/* editor: the centered column measure and its ruled left border */
+.editor-main {
+  max-width: calc(var(--measure) + 6rem);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+.editor-column {
+  min-height: calc(100dvh - 3.5rem);
+  border-left: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  padding-block: 2rem;
+  padding-left: 1.25rem;
+}
+@media (min-width: 40rem) {
+  .editor-main {
+    padding-inline: 2rem;
+  }
+  .editor-column {
+    padding-left: 2rem;
+  }
+}
+
+/* published page: the reading measure, centered, with its own gutters */
+.published-main {
+  max-width: calc(var(--measure) + 3rem);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  padding-block: 4rem;
+}
+@media (min-width: 40rem) {
+  .published-main {
+    padding-block: 6rem;
+  }
+}

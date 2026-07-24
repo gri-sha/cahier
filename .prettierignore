@@ -1,0 +1,21 @@
+# dependencies & lockfiles
+node_modules/
+bun.lock
+
+# build output
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# generated
+next-env.d.ts
+
+# local state & tooling artifacts
+.pglite/
+.playwright-mcp/
+.vercel/
+
+# static assets
+public/

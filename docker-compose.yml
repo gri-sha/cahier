@@ -1,0 +1,16 @@
+# Local dev database. Production uses Neon (DATABASE_URL on Vercel).
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cahier-db
+    environment:
+      POSTGRES_USER: cahier
+      POSTGRES_PASSWORD: cahier
+      POSTGRES_DB: cahier
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:

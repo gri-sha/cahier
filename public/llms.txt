@@ -1,0 +1,17 @@
+# cahier
+
+> Your CV as a clean link. Each account gets one markdown file, published at cahier.fyi/username. Sign in with an email, write in a single editor, pick a theme, press publish.
+
+cahier is a personal, non-commercial project. It publishes one markdown document per account as a public page. There is no tracking, no ads, and no analytics.
+
+## Pages
+
+- [Home](https://cahier.fyi/): what cahier is and how to start.
+- [Start](https://cahier.fyi/start): sign in or create an account.
+- [Terms](https://cahier.fyi/terms): the rules for publishing a page.
+- [Privacy](https://cahier.fyi/privacy): what is collected, why, and your rights.
+
+## Notes
+
+- Published pages live at cahier.fyi/<username> and are set to noindex.
+- Contact: hello@cahier.fyi
